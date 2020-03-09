@@ -63,7 +63,8 @@ def force_coldstart_on_module(com):
     com.write(bytes(full_command,'utf-8'))
     com.write(bytes("\r\n",'utf-8'))
 
-    while response := com.readline().rstrip():
+    while True:
+        response = com.readline().rstrip()
         if re.match('\$PMTK', response.decode('utf-8')):
             logging.info("Got\t\t[" + response.decode('utf-8') + "]")
             break
@@ -80,7 +81,8 @@ def dump_module_configuration(com):
         com.write(bytes(full_command,'utf-8'))
         com.write(bytes("\r\n",'utf-8'))
 
-        while response := com.readline().rstrip():
+        while True:
+            response = com.readline().rstrip()
             if re.match('\$PMTK', response.decode('utf-8')):
                 logging.info("Got\t\t[" + response.decode('utf-8') + "]")
                 break
@@ -124,7 +126,8 @@ def read_serial(com):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     cmdline_parser = argparse.ArgumentParser(description='Process NMEA files.')
-    cmdline_parser.add_argument('--file', action='store', dest='input_file', help="logfile to be processed")
+    cmdline_parser.add_argument('--infile', action='store', dest='input_file', help="logfile to be processed")
+    cmdline_parser.add_argument('--mapfile', action='store', default="map.html", dest='map_file', help="name of the HTML output file")
     cmdline_parser.add_argument('--serial', action='store', dest='serial_port', help="serial port to be used as input")
     cmdline_parser.add_argument('--query', action='store_true', default=False, dest='query_config', help="dump module configuration (serial required!)")
     cmdline_parser.add_argument('--config', action='store_true', default=False, dest='set_config', help="run module configuration sequence (serial required!)")
@@ -176,4 +179,4 @@ if __name__ == '__main__':
     gmap.scatter( lat_list, lon_list, '# FF0000', 
                                   size = 0.5, marker = False ) 
     # Pass the absolute path 
-    gmap.draw( "map.html" )
+    gmap.draw( args.map_file )

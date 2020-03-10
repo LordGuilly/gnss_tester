@@ -19,7 +19,9 @@ config_check_cmd_list = [
     ]
 
 module_setup_cmd_list = [
-    "$PMTK386,2*3E",
+    "PMTK313,1",
+    "PMTK386,2",
+    "PMTK886,4",
 ]
 
 def generate_full_config_cmd(command):
@@ -69,7 +71,23 @@ def force_coldstart_on_module(com):
             logging.info("Got\t\t[" + response.decode('utf-8') + "]")
             break
 
-    
+def configure_module(com):
+    for command in module_setup_cmd_list:
+        logging.info("Configuring [" + command + "]")
+        com.write(bytes("\r\n",'utf-8'))
+        com.write(bytes(generate_full_config_cmd(command),'utf-8'))
+        com.write(bytes("\r\n",'utf-8'))
+
+        #check reply, retry up to 10 times
+        counter = 20
+        while counter > 0:
+            response = com.readline().rstrip()
+            if re.match('\$PMTK001', response.decode('utf-8')):
+                logging.info("Got\t\t[" + response.decode('utf-8') + "]")
+                break
+            counter = counter -1
+
+ 
 def dump_module_configuration(com):
     for command in config_check_cmd_list:
         full_command = generate_full_config_cmd(command)
@@ -106,8 +124,6 @@ def read(filename):
             
 
 def read_serial(com, duration, raw_file):
-    
-    
     reader = pynmea2.NMEAStreamReader(errors='ignore')
     
     if duration:
@@ -165,9 +181,6 @@ if __name__ == '__main__':
             logging.error('could not connect to %s' % args.serial_port)
             time.sleep(5.0)
             exit(1)
-        
-        if args.coldstart:
-            force_coldstart_on_module(com)
 
         if args.query_config:
             logging.info("Just dumping module configuration")
@@ -175,9 +188,12 @@ if __name__ == '__main__':
             com.close()
             exit(1)
         else:
+            if args.coldstart:
+                force_coldstart_on_module(com)
+
             if args.set_config:
-                logging.fatal("Not supported yet!")
-                exit(1)
+                configure_module(com)
+
             if args.raw_file:
                 logging.info("logging raw data to [" + args.raw_file + "]")
                 file_logger = open(args.raw_file, "w")        

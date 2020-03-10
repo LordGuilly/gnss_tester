@@ -105,11 +105,17 @@ def read(filename):
                 logging.error("PARSER ERROR")
             
 
-def read_serial(com):
+def read_serial(com, duration):
     
     reader = pynmea2.NMEAStreamReader(errors='ignore')
+    
+    if duration:
+        endtime = time.monotonic() + duration
+    else:
+        endtime = 0
+    logging.info("running time [" + str(duration) + "]" )
 
-    while True:
+    while (endtime != 0) and (endtime > time.monotonic()):
         try:
             data = com.readline()
             for msg in reader.next(data.decode("utf-8")):
@@ -132,6 +138,7 @@ if __name__ == '__main__':
     cmdline_parser.add_argument('--query', action='store_true', default=False, dest='query_config', help="dump module configuration (serial required!)")
     cmdline_parser.add_argument('--config', action='store_true', default=False, dest='set_config', help="run module configuration sequence (serial required!)")
     cmdline_parser.add_argument('--coldstart', action='store_true', default=False, dest='coldstart', help="force a module coldstart (serial required!)")
+    cmdline_parser.add_argument('--duration', action='store', default=0, dest='duration', help="run the the capture for DURATION seconds (serial required!)", type=int)
     args = cmdline_parser.parse_args()
     
 
@@ -166,7 +173,7 @@ if __name__ == '__main__':
                 logging.fatal("Not supported yet!")
                 exit(1)
                             
-            read_serial(com)
+            read_serial(com, args.duration)
             com.close()
     else:
         logging.fatal("No input method selected, please specify a file or a serial")
@@ -175,8 +182,12 @@ if __name__ == '__main__':
     # GoogleMapPlotter return Map object 
     # Pass the center latitude and 
     # center longitude 
-    gmap = gmplot.GoogleMapPlotter(lat_list[0], lon_list[0],19 ) 
-    gmap.scatter( lat_list, lon_list, '# FF0000', 
-                                  size = 0.5, marker = False ) 
+    logging.info("Generating [" + args.map_file + "]")
+    gmap = gmplot.GoogleMapPlotter(lat_list[0], lon_list[0],19 )
+    gmap.coloricon = "http://www.googlemapsmarkers.com/v1/%s/" 
+    gmap.scatter( lat_list, lon_list, '# FF0000', size = 0.5, marker = False ) 
+    #plot the last one in red
+    logging.info("Market at lat[" + str(lat_list[-1]) +"]\tlon[" + str(lon_list[-1]) + "]")
+    gmap.marker(lat_list[-1], lon_list[-1], 'red') 
     # Pass the absolute path 
     gmap.draw( args.map_file )

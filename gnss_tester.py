@@ -99,13 +99,14 @@ def read(filename):
             logging.debug(line)
             try:
                 msg = pynmea2.parse(line.rstrip())
-                update_position_lists(msg)#
+                update_position_lists(msg)
                 dump_debug_info(msg)
             except pynmea2.ParseError:
                 logging.error("PARSER ERROR")
             
 
-def read_serial(com, duration):
+def read_serial(com, duration, raw_file):
+    
     
     reader = pynmea2.NMEAStreamReader(errors='ignore')
     
@@ -118,6 +119,9 @@ def read_serial(com, duration):
     while (endtime != 0) and (endtime > time.monotonic()):
         try:
             data = com.readline()
+            if raw_file:
+                raw_file.write(data.decode("utf-8"))
+
             for msg in reader.next(data.decode("utf-8")):
                 update_position_lists(msg)
                 dump_debug_info(msg)
@@ -139,11 +143,13 @@ if __name__ == '__main__':
     cmdline_parser.add_argument('--config', action='store_true', default=False, dest='set_config', help="run module configuration sequence (serial required!)")
     cmdline_parser.add_argument('--coldstart', action='store_true', default=False, dest='coldstart', help="force a module coldstart (serial required!)")
     cmdline_parser.add_argument('--duration', action='store', default=0, dest='duration', help="run the the capture for DURATION seconds (serial required!)", type=int)
+    cmdline_parser.add_argument('--rawfile', action='store', default="", dest='raw_file', help="file where the raw NMEA data will be stored (serial required)")
     args = cmdline_parser.parse_args()
     
 
     lat_list = list()
     lon_list = list()
+    file_logger = None
     #read_serial("COM8")
     #read("input_data.txt")
     #read("L86_data.txt")
@@ -172,12 +178,19 @@ if __name__ == '__main__':
             if args.set_config:
                 logging.fatal("Not supported yet!")
                 exit(1)
-                            
-            read_serial(com, args.duration)
+            if args.raw_file:
+                logging.info("logging raw data to [" + args.raw_file + "]")
+                file_logger = open(args.raw_file, "w")        
+                                            
+            read_serial(com, args.duration, file_logger)
             com.close()
     else:
         logging.fatal("No input method selected, please specify a file or a serial")
         exit(1)
+
+    if file_logger:
+        logging.info("closing raw data file [" + args.raw_file + "]")
+        file_logger.close()
 
     # GoogleMapPlotter return Map object 
     # Pass the center latitude and 

@@ -58,9 +58,15 @@ def dump_debug_info(msg):
         logging.info("Time[" + str(msg.timestamp) + "]\tSatellites in view[" + msg.num_sats + "]")
 
 
+def force_full_coldstart_on_module(com):
+    restart_module(com, "PMTK104")
+
 def force_coldstart_on_module(com):
-    logging.debug("Forcing module coldstart")
-    full_command = generate_full_config_cmd("PMTK103")
+    restart_module(com, "PMTK103")
+
+def restart_module(com, command):
+    logging.debug("Forcing module restart [" + command + "]")
+    full_command = generate_full_config_cmd(command)
     com.write(bytes("\r\n",'utf-8'))
     com.write(bytes(full_command,'utf-8'))
     com.write(bytes("\r\n",'utf-8'))
@@ -158,6 +164,7 @@ if __name__ == '__main__':
     cmdline_parser.add_argument('--query', action='store_true', default=False, dest='query_config', help="dump module configuration (serial required!)")
     cmdline_parser.add_argument('--config', action='store_true', default=False, dest='set_config', help="run module configuration sequence (serial required!)")
     cmdline_parser.add_argument('--coldstart', action='store_true', default=False, dest='coldstart', help="force a module coldstart (serial required!)")
+    cmdline_parser.add_argument('--full-coldstart', action='store_true', default=False, dest='full_coldstart', help="force a full coldstart, resetting the config (serial required!)")
     cmdline_parser.add_argument('--duration', action='store', default=0, dest='duration', help="run the the capture for DURATION seconds (serial required!)", type=int)
     cmdline_parser.add_argument('--rawfile', action='store', default="", dest='raw_file', help="file where the raw NMEA data will be stored (serial required)")
     args = cmdline_parser.parse_args()
@@ -193,7 +200,10 @@ if __name__ == '__main__':
 
             if args.set_config:
                 configure_module(com)
-
+            
+            if args.full_coldstart:
+                force_full_coldstart_on_module(com)
+        
             if args.raw_file:
                 logging.info("logging raw data to [" + args.raw_file + "]")
                 file_logger = open(args.raw_file, "w")        
